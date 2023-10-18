@@ -4,18 +4,18 @@ const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
 const mongoose = require("./db");
-const authRouter = require("./routers/auth-router");
 const tasksRouter = require("./routers/tasks-router");
-
+const authRouter = require("./routers/auth-router");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 
 dotenv.config();
 
 app.use(express.json());
-app.use(cors()); //pendiente
-app.use("/auth", authRouter);
-app.use("/tasks", tasksRouter);
+app.use(cors());
+
+app.use("/auth", authRouter); // Rutas de autenticación
+app.use("/tasks", tasksRouter); // Rutas de tareas
 
 const tasksFilePath = path.join(__dirname, "tasks.json");
 

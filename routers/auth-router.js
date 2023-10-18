@@ -1,65 +1,78 @@
 const express = require("express");
 const router = express.Router();
-const fs = require("fs");
-const path = require("path");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+const User = require("../models/User");
 
 require("dotenv").config();
 
-// Array de usuarios predefinidos
-const users = [
-  { username: "usuario1", password: "contraseña1" },
-  { username: "usuario2", password: "contraseña2" },
-];
-// Content-Type  = key
-// application/json  = value
-//http://localhost:3000/auth/login
+// Ruta para registrar un nuevo usuario
+// POST
+// http://localhost:3000/auth/register
 /*
 {
-  "username": "usuario1",
-  "password": "contraseña1"
+  "username": "nuevo_usuario",
+  "password": "contraseña_segura"
 }
- */
+*/
+// Inicio de sesión de un usuario
+// POST
+// http://localhost:3000/auth/login
+/*
+{
+  "username": "nuevo_usuario",
+  "password": "contraseña_segura"
+}
+*/
 
-// Middleware de autenticación
-router.post("/login", (req, res) => {
-  const { username, password } = req.body;
+// Acceso a otras rutas protegidas con JWT
+// Authorization: Bearer <token>
 
-  // Verifica las credenciales del usuario
-  const user = users.find(
-    (user) => user.username === username && user.password === password
-  );
+router.post("/register", async (req, res) => {
+  try {
+    const { username, password } = req.body;
 
-  if (!user) {
-    return res.status(401).json({ error: "Credenciales incorrectas" });
-  }
-
-  // Crear y firmar el token JWT
-  const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, {
-    expiresIn: "1h",
-  });
-
-  res.json({ token });
-});
-
-// Middleware de protección con JWT
-router.use((req, res, next) => {
-  const token = req.headers.authorization;
-
-  if (!token) {
-    return res
-      .status(401)
-      .json({ error: "Token de autorización no proporcionado" });
-  }
-
-  // Verificar y decodificar el token JWT
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).json({ error: "Token de autorización no válido" });
+    if (!username || !password) {
+      return res.status(400).json({
+        error: "Solicitud POST con cuerpo vacío o atributos faltantes",
+      });
     }
-    req.user = decoded; // Almacena el usuario decodificado en el objeto de solicitud
-    next();
-  });
+
+    // Verifica si el usuario ya existe en la base de datos
+    const existingUser = await User.findOne({ username });
+
+    if (existingUser) {
+      return res.status(400).json({ error: "El usuario ya existe" });
+    }
+
+    // Hash del password para almacenarlo de forma segura en la base de datos
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Crea un nuevo usuario
+    const newUser = new User({
+      username,
+      password: hashedPassword,
+    });
+
+    // Guarda el usuario en la base de datos
+    await newUser.save();
+
+    // Crear y firmar el token JWT
+    const token = jwt.sign(
+      { username: newUser.username },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1h",
+      }
+    );
+
+    res.json({ token });
+  } catch (err) {
+    console.error("Error al registrar un usuario:", err);
+    res.status(500).json({ error: "Error al registrar un usuario" });
+  }
 });
+
+// Resto de las rutas, incluyendo protección con JWT, aquí...
 
 module.exports = router;

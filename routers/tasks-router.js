@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const Task = require("./Task"); // Importa el modelo de tareas
+const Task = require("../models/Task");
 
 // Ruta para crear una tarea con nombre y descripción
 // http://localhost:3000/tasks/create
