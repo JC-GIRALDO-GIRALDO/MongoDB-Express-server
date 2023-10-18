@@ -20,6 +20,7 @@ const users = [
   "password": "contraseña1"
 }
  */
+
 // Middleware de autenticación
 router.post("/login", (req, res) => {
   const { username, password } = req.body;
