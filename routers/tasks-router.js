@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const Task = require("./Task"); // Importa el modelo de tareas
+const Task = require("../modules/Task"); // Importa el modelo de tareas
 
 // Ruta para crear una tarea con nombre y descripción
 // http://localhost:3000/tasks/create
@@ -31,7 +31,8 @@ router.post("/create", async (req, res) => {
     res.json(savedTask);
   } catch (err) {
     console.error("Error al crear una tarea:", err);
-    res.status(500).json({ error: "Error al crear una tarea" });
+    //res.status(500).json({ error: "Error al crear una tarea" });
+    throw new Error("Error al crear una tarea");
   }
 });
 
