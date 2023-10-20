@@ -1,12 +1,10 @@
-// models/User.js
-
+// User.js
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
   username: String,
   password: String,
-  // Agrega un campo para el nombre de la colección asociada al usuario
-  collectionName: String,
+  taskIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }],
 });
 
 const User = mongoose.model("User", userSchema);

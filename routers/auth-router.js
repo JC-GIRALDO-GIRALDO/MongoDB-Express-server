@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const authMiddleware = require("../middlewares/authMiddleware");
+const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const User = require("../models/User");
 
 require("dotenv").config();
 
@@ -15,19 +16,6 @@ require("dotenv").config();
   "password": "contraseña_segura"
 }
 */
-// Inicio de sesión de un usuario
-// POST
-// http://localhost:3000/auth/login
-/*
-{
-  "username": "nuevo_usuario",
-  "password": "contraseña_segura"
-}
-*/
-
-// Acceso a otras rutas protegidas con JWT
-// Authorization: Bearer <token>
-
 router.post("/register", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -62,7 +50,7 @@ router.post("/register", async (req, res) => {
       { username: newUser.username },
       process.env.JWT_SECRET,
       {
-        expiresIn: "1h",
+        expiresIn: "1h", // Puedes ajustar el tiempo de expiración del token
       }
     );
 
@@ -73,6 +61,53 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Resto de las rutas, incluyendo protección con JWT, aquí...
+// Ruta para el inicio de sesión
+// POST
+// http://localhost:3000/auth/login
+/*
+{
+  "username": "nombre_de_usuario",
+  "password": "contraseña"
+}
+*/
+router.post("/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({
+        error: "Solicitud POST con cuerpo vacío o atributos faltantes",
+      });
+    }
+
+    // Verifica si el usuario existe en la base de datos
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      return res.status(401).json({ error: "Credenciales incorrectas" });
+    }
+
+    // Compara la contraseña ingresada con la almacenada en la base de datos
+    const passwordMatch = await bcrypt.compare(password, user.password);
+
+    if (!passwordMatch) {
+      return res.status(401).json({ error: "Credenciales incorrectas" });
+    }
+
+    // Si las credenciales son válidas, crea un token JWT
+    const token = jwt.sign(
+      { username: user.username },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1h", // Puedes ajustar el tiempo de expiración del token
+      }
+    );
+
+    res.json({ token });
+  } catch (err) {
+    console.error("Error al iniciar sesión:", err);
+    res.status(500).json({ error: "Error al iniciar sesión" });
+  }
+});
 
 module.exports = router;

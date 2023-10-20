@@ -1,49 +1,39 @@
+// app.js
+
 const express = require("express");
-const app = express();
-const fs = require("fs");
-const path = require("path");
 const cors = require("cors");
-const mongoose = require("./db");
-const tasksRouter = require("./routers/tasks-router");
+const mongoose = require("mongoose");
 const authRouter = require("./routers/auth-router");
-const jwt = require("jsonwebtoken");
-const dotenv = require("dotenv");
+const tasksRouter = require("./routers/tasks-router");
+const authMiddleware = require("./middlewares/authMiddleware");
+const Task = require("./models/Task");
 
-dotenv.config();
-
-app.use(express.json());
-app.use(cors());
-
-app.use("/auth", authRouter); // Rutas de autenticación
-app.use("/tasks", tasksRouter); // Rutas de tareas
-
-const tasksFilePath = path.join(__dirname, "tasks.json");
-
-// Middleware para validar métodos HTTP válidos
-app.use((req, res, next) => {
-  if (
-    req.method !== "GET" &&
-    req.method !== "POST" &&
-    req.method !== "PUT" &&
-    req.method !== "DELETE"
-  ) {
-    return res.status(400).json({ error: "Método HTTP no válido" });
-  }
-  next();
-});
-
-app.get("/tasks", (req, res) => {
-  try {
-    const data = fs.readFileSync(tasksFilePath, "utf8");
-    const tasks = JSON.parse(data);
-    res.json(tasks);
-  } catch (err) {
-    console.error("Error al leer el archivo JSON:", err);
-    res.status(500).json({ error: "Error al leer el archivo JSON" });
-  }
-});
-
+const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Configuración de middleware
+app.use(cors());
+app.use(express.json());
+
+// Conexión a MongoDB
+mongoose
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => {
+    console.log("Conexión a MongoDB exitosa");
+  })
+  .catch((err) => {
+    console.error("Error de conexión a MongoDB:", err);
+  });
+
+// Rutas de autenticación
+app.use("/auth", authRouter);
+
+// Rutas de tareas protegidas por el middleware de autenticación
+app.use("/tasks", authMiddleware, tasksRouter);
+
 app.listen(PORT, () => {
   console.log(`Servidor Express en funcionamiento en el puerto ${PORT}`);
 });
