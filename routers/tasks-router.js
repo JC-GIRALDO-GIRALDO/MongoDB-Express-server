@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const Task = require("../modules/Task"); // Importa el modelo de tareas
+const Task = require("../models/Task");
+const authMiddleware = require("../middlewares/authMiddleware");
+
+// Aplica el middleware de autenticación a todas las rutas de tareas que requieran autenticación
+router.use(authMiddleware);
 
 // Ruta para crear una tarea con nombre y descripción
 // http://localhost:3000/tasks/create
@@ -11,28 +15,29 @@ const Task = require("../modules/Task"); // Importa el modelo de tareas
 }
 */
 router.post("/create", async (req, res) => {
-  const { name, description } = req.body;
-
-  if (!name || !description) {
-    return res.status(400).json({
-      error: "Solicitud POST con cuerpo vacío o atributos faltantes",
-    });
-  }
-
   try {
+    const { name, description } = req.body;
+
+    if (!name || !description) {
+      return res.status(400).json({
+        error: "Solicitud POST con cuerpo vacío o atributos faltantes",
+      });
+    }
+
+    // Crea una nueva tarea
     const newTask = new Task({
       isCompleted: false,
       name,
       description,
     });
 
+    // Guarda la tarea en la base de datos
     const savedTask = await newTask.save();
 
-    res.json(savedTask);
+    res.status(200).json(savedTask);
   } catch (err) {
     console.error("Error al crear una tarea:", err);
-    //res.status(500).json({ error: "Error al crear una tarea" });
-    throw new Error("Error al crear una tarea");
+    res.status(500).json({ error: "Error al crear una tarea" });
   }
 });
 
@@ -118,4 +123,19 @@ router.get("/incomplete", async (req, res) => {
   }
 });
 
+// Ruta para obtener tareas asociadas al usuario actual
+router.get("/tasks", async (req, res) => {
+  const user = req.user; // Supongamos que tienes un middleware que verifica el token y guarda el usuario en req.user
+  const taskIds = user.taskIds;
+
+  try {
+    const tasks = await Task.find({ _id: { $in: taskIds } });
+    res.json(tasks);
+  } catch (err) {
+    console.error("Error al obtener las tareas del usuario:", err);
+    res.status(500).json({ error: "Error al obtener las tareas del usuario" });
+  }
+});
+
 module.exports = router;
+
